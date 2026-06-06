@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080c12;
+    --surface:   #0d1420;
+    --border:    #1a2535;
+    --cyan:      #00e5ff;
+    --cyan-dim:  #00b8cc;
+    --cyan-glow: rgba(0, 229, 255, 0.18);
+    --cyan-soft: rgba(0, 229, 255, 0.08);
+    --text:      #c8d8e8;
+    --text-dim:  #4a6070;
+    --user-bg:   #0a1f2e;
+    --user-bd:   #0e3348;
+    --nova-bg:   #060e17;
+    --nova-bd:   #1a2535;
+    --danger:    #ff4466;
+    --radius:    14px;
+    --font:      'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    overflow: hidden;
+  }
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  #app {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 100vh;
+    height: 100vh;
+  }
+
+  /* ── Sidebar ─────────────────────────────────────────────── */
+  #sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 160px 300px at 50% 40%, rgba(0,229,255,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .brand {
+    letter-spacing: 0.35em;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 36px;
+    z-index: 1;
+  }
+  .brand span { color: var(--cyan); }
+
+  /* ── Orb ─────────────────────────────────────────────────── */
+  #orb-wrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  /* Rings */
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0,229,255,0.12);
+    animation: ring-idle 4s ease-in-out infinite;
+  }
+  .ring:nth-child(1) { width: 100%; height: 100%; animation-delay: 0s; }
+  .ring:nth-child(2) { width: 78%;  height: 78%;  animation-delay: 0.4s; }
+  .ring:nth-child(3) { width: 56%;  height: 56%;  animation-delay: 0.8s; }
+
+  @keyframes ring-idle {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50%       { opacity: 0.6; transform: scale(1.04); }
+  }
+
+  /* Orb core */
+  #orb {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    position: relative;
+    background: radial-gradient(circle at 38% 35%,
+      rgba(0,229,255,0.55) 0%,
+      rgba(0,120,180,0.35) 40%,
+      rgba(0,30,60,0.9) 100%
+    );
+    box-shadow:
+      0 0 20px rgba(0,229,255,0.3),
+      0 0 60px rgba(0,229,255,0.1),
+      inset 0 0 20px rgba(0,0,0,0.6);
+    transition: box-shadow 0.4s, transform 0.4s;
+    animation: orb-idle 3.5s ease-in-out infinite;
+  }
+
+  #orb::after {
+    content: '';
+    position: absolute;
+    top: 14%; left: 20%;
+    width: 30%; height: 18%;
+    background: rgba(255,255,255,0.25);
+    border-radius: 50%;
+    filter: blur(3px);
+    transform: rotate(-30deg);
+  }
+
+  @keyframes orb-idle {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 20px rgba(0,229,255,0.3), 0 0 60px rgba(0,229,255,0.1), inset 0 0 20px rgba(0,0,0,0.6); }
+    50%       { transform: scale(1.05); box-shadow: 0 0 30px rgba(0,229,255,0.4), 0 0 80px rgba(0,229,255,0.15), inset 0 0 20px rgba(0,0,0,0.6); }
+  }
+
+  /* ── State: listening ─────────────────────────────────────── */
+  body.listening #orb {
+    animation: orb-listen 0.9s ease-in-out infinite;
+    background: radial-gradient(circle at 38% 35%,
+      rgba(0,255,220,0.7) 0%,
+      rgba(0,180,200,0.45) 40%,
+      rgba(0,40,80,0.9) 100%
+    );
+  }
+  @keyframes orb-listen {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 28px rgba(0,255,200,0.5), 0 0 80px rgba(0,229,255,0.2), inset 0 0 20px rgba(0,0,0,0.5); }
+    50%       { transform: scale(1.1);  box-shadow: 0 0 45px rgba(0,255,200,0.7), 0 0 120px rgba(0,229,255,0.3), inset 0 0 20px rgba(0,0,0,0.5); }
+  }
+  body.listening .ring {
+    animation: ring-listen 0.9s ease-in-out infinite;
+    border-color: rgba(0,255,200,0.25);
+  }
+  @keyframes ring-listen {
+    0%   { opacity: 0.2; transform: scale(1); }
+    50%  { opacity: 0.8; transform: scale(1.08); }
+    100% { opacity: 0.2; transform: scale(1); }
+  }
+  body.listening .ring:nth-child(2) { animation-delay: 0.15s; }
+  body.listening .ring:nth-child(3) { animation-delay: 0.3s; }
+
+  /* Sonar rings — listening only */
+  .sonar {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1px solid rgba(0,255,200,0.4);
+    animation: sonar 1.8s ease-out infinite;
+  }
+  .sonar:nth-child(5) { animation-delay: 0.6s; }
+  body.listening .sonar { display: block; }
+  @keyframes sonar {
+    0%   { transform: scale(1);   opacity: 0.6; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  /* ── State: thinking ──────────────────────────────────────── */
+  body.thinking #orb {
+    animation: orb-think 2s linear infinite;
+    background: radial-gradient(circle at 38% 35%,
+      rgba(120,80,255,0.7) 0%,
+      rgba(60,40,180,0.45) 40%,
+      rgba(10,5,40,0.9) 100%
+    );
+  }
+  @keyframes orb-think {
+    0%   { transform: scale(1)    rotate(0deg);   box-shadow: 0 0 25px rgba(120,80,255,0.5), 0 0 70px rgba(80,50,200,0.2), inset 0 0 20px rgba(0,0,0,0.6); }
+    50%  { transform: scale(1.06) rotate(180deg); box-shadow: 0 0 40px rgba(160,100,255,0.6), 0 0 100px rgba(100,60,220,0.3), inset 0 0 20px rgba(0,0,0,0.6); }
+    100% { transform: scale(1)    rotate(360deg); box-shadow: 0 0 25px rgba(120,80,255,0.5), 0 0 70px rgba(80,50,200,0.2), inset 0 0 20px rgba(0,0,0,0.6); }
+  }
+  body.thinking .ring {
+    border-color: rgba(140,80,255,0.2);
+    animation: ring-think 2s linear infinite;
+  }
+  body.thinking .ring:nth-child(2) { animation: ring-think 2s linear infinite reverse; }
+  body.thinking .ring:nth-child(3) { animation: ring-think 1.4s linear infinite; }
+  @keyframes ring-think {
+    from { transform: rotate(0deg) scale(1); }
+    to   { transform: rotate(360deg) scale(1); }
+  }
+
+  /* Particle dots — thinking only */
+  .particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .dot {
+    display: none;
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: rgba(160,100,255,0.9);
+    top: 50%; left: 50%;
+    transform-origin: 0 0;
+    animation: dot-orbit 2s linear infinite;
+  }
+  body.thinking .dot { display: block; }
+  .dot:nth-child(1) { animation-delay: 0s;    --ang: 0deg;    --r: 52px; }
+  .dot:nth-child(2) { animation-delay: 0.5s;  --ang: 120deg;  --r: 52px; }
+  .dot:nth-child(3) { animation-delay: 1s;    --ang: 240deg;  --r: 52px; }
+  @keyframes dot-orbit {
+    from { transform: rotate(calc(var(--ang)))            translateX(var(--r)) scale(1);   opacity: 1; }
+    50%  { transform: rotate(calc(var(--ang) + 180deg))  translateX(var(--r)) scale(1.6); opacity: 0.6; }
+    to   { transform: rotate(calc(var(--ang) + 360deg))  translateX(var(--r)) scale(1);   opacity: 1; }
+  }
+
+  /* ── State: speaking ──────────────────────────────────────── */
+  body.speaking #orb {
+    animation: orb-speak 0.5s ease-in-out infinite alternate;
+    background: radial-gradient(circle at 38% 35%,
+      rgba(0,255,255,0.8) 0%,
+      rgba(0,160,220,0.5) 40%,
+      rgba(0,20,50,0.9) 100%
+    );
+  }
+  @keyframes orb-speak {
+    from { transform: scale(1);    box-shadow: 0 0 35px rgba(0,229,255,0.6), 0 0 100px rgba(0,200,255,0.25), inset 0 0 20px rgba(0,0,0,0.4); }
+    to   { transform: scale(1.12); box-shadow: 0 0 55px rgba(0,229,255,0.8), 0 0 150px rgba(0,200,255,0.4), inset 0 0 20px rgba(0,0,0,0.4); }
+  }
+  body.speaking .ring {
+    border-color: rgba(0,229,255,0.35);
+    animation: ring-speak 0.5s ease-in-out infinite alternate;
+  }
+  body.speaking .ring:nth-child(2) { animation-delay: 0.1s; }
+  body.speaking .ring:nth-child(3) { animation-delay: 0.2s; }
+  @keyframes ring-speak {
+    from { transform: scale(1);    opacity: 0.4; }
+    to   { transform: scale(1.1);  opacity: 0.9; }
+  }
+
+  /* Wave bars — speaking only */
+  .wave-bars {
+    display: none;
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 3px;
+    align-items: flex-end;
+    height: 20px;
+  }
+  body.speaking .wave-bars { display: flex; }
+  .bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--cyan);
+    animation: bar-bounce 0.6s ease-in-out infinite alternate;
+    box-shadow: 0 0 6px var(--cyan);
+  }
+  .bar:nth-child(1) { height: 6px;  animation-delay: 0s; }
+  .bar:nth-child(2) { height: 14px; animation-delay: 0.08s; }
+  .bar:nth-child(3) { height: 20px; animation-delay: 0.16s; }
+  .bar:nth-child(4) { height: 14px; animation-delay: 0.24s; }
+  .bar:nth-child(5) { height: 6px;  animation-delay: 0.32s; }
+  @keyframes bar-bounce {
+    from { transform: scaleY(0.4); opacity: 0.6; }
+    to   { transform: scaleY(1);   opacity: 1; }
+  }
+
+  /* ── Status label ─────────────────────────────────────────── */
+  #status-label {
+    margin-top: 48px;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    transition: color 0.4s;
+    z-index: 1;
+  }
+  body.listening #status-label  { color: #00ffcc; }
+  body.thinking  #status-label  { color: #a060ff; }
+  body.speaking  #status-label  { color: var(--cyan); }
+
+  /* ── WS indicator ─────────────────────────────────────────── */
+  #ws-dot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    color: var(--text-dim);
+    z-index: 1;
+  }
+  #ws-dot .dot-icon {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  #ws-dot.connected .dot-icon    { background: #00ffaa; box-shadow: 0 0 6px #00ffaa; }
+  #ws-dot.connecting .dot-icon   { background: #ffcc00; box-shadow: 0 0 6px #ffcc00; animation: blink 1s infinite; }
+  #ws-dot.disconnected .dot-icon { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  /* ── Main panel ───────────────────────────────────────────── */
+  #main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Header ──────────────────────────────────────────────── */
+  #header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(13,20,32,1) 0%, rgba(8,12,18,0) 100%);
+  }
+  #header h1 {
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    font-weight: 400;
+    color: var(--text-dim);
+  }
+  #header h1 span { color: var(--cyan); font-weight: 600; }
+  #clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  #clear-btn:hover { border-color: var(--cyan-dim); color: var(--cyan-dim); }
+
+  /* ── Chat area ───────────────────────────────────────────── */
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    scroll-behavior: smooth;
+  }
+  #chat::-webkit-scrollbar { width: 4px; }
+  #chat::-webkit-scrollbar-track { background: transparent; }
+  #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Welcome message */
+  .welcome {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    margin: auto 0;
+    padding: 40px 0;
+    line-height: 2;
+  }
+  .welcome .welcome-name { color: var(--cyan); font-size: 16px; letter-spacing: 0.3em; display: block; margin-bottom: 10px; }
+
+  /* Message bubbles */
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 72%;
+    animation: msg-in 0.25s ease-out;
+  }
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user   { align-self: flex-end; align-items: flex-end; }
+  .msg.nova   { align-self: flex-start; align-items: flex-start; }
+
+  .msg-meta {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+  }
+  .msg.user .msg-meta { color: rgba(0,229,255,0.4); }
+  .msg.nova .msg-meta { color: rgba(180,200,220,0.35); }
+
+  .bubble {
+    padding: 11px 16px;
+    border-radius: var(--radius);
+    line-height: 1.65;
+    font-size: 13px;
+    position: relative;
+    word-break: break-word;
+  }
+  .msg.user .bubble {
+    background: var(--user-bg);
+    border: 1px solid var(--user-bd);
+    border-bottom-right-radius: 4px;
+    color: #c8eeff;
+    box-shadow: 0 0 20px rgba(0,100,180,0.1);
+  }
+  .msg.nova .bubble {
+    background: var(--nova-bg);
+    border: 1px solid var(--nova-bd);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+    box-shadow: 0 0 20px rgba(0,229,255,0.04);
+  }
+  .msg.nova .bubble::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    border-radius: 2px 0 0 2px;
+    background: linear-gradient(180deg, var(--cyan), transparent);
+    opacity: 0.5;
+  }
+
+  /* Markdown inside bubbles */
+  .bubble code {
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.12);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: var(--font);
+    font-size: 0.9em;
+    color: var(--cyan);
+  }
+  .bubble pre {
+    background: #04090f;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  .bubble pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #9de8f0;
+  }
+  .bubble strong { color: #e0f4ff; font-weight: 600; }
+  .bubble em { color: #a0c8d8; }
+  .bubble a { color: var(--cyan); text-decoration: none; border-bottom: 1px solid rgba(0,229,255,0.3); }
+  .bubble a:hover { border-bottom-color: var(--cyan); }
+  .bubble ul, .bubble ol { padding-left: 18px; margin: 6px 0; }
+  .bubble li { margin: 3px 0; }
+  .bubble blockquote {
+    border-left: 2px solid var(--cyan-dim);
+    padding-left: 10px;
+    color: var(--text-dim);
+    margin: 6px 0;
+    font-style: italic;
+  }
+  .bubble h1, .bubble h2, .bubble h3 {
+    color: #d8eef8;
+    margin: 10px 0 6px;
+    font-weight: 600;
+  }
+  .bubble h1 { font-size: 1.15em; }
+  .bubble h2 { font-size: 1.05em; }
+  .bubble h3 { font-size: 0.97em; }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding: 14px 18px;
+  }
+  .typing-indicator span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--cyan-dim);
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+    40%           { transform: scale(1);   opacity: 1; }
+  }
+
+  /* ── Input area ──────────────────────────────────────────── */
+  #input-area {
+    padding: 16px 28px 22px;
+    border-top: 1px solid var(--border);
+    background: linear-gradient(0deg, rgba(8,12,18,1) 0%, rgba(8,12,18,0) 100%);
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  #input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 2px);
+    padding: 10px 10px 10px 16px;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  #input-row:focus-within {
+    border-color: rgba(0,229,255,0.4);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.06);
+  }
+
+  #msg-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    resize: none;
+    max-height: 120px;
+    line-height: 1.5;
+    padding: 2px 0;
+  }
+  #msg-input::placeholder { color: var(--text-dim); }
+
+  .icon-btn {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .icon-btn:active { transform: scale(0.93); }
+  .icon-btn svg { pointer-events: none; }
+
+  #mic-btn {
+    background: var(--border);
+    color: var(--text-dim);
+  }
+  #mic-btn:hover { background: rgba(0,229,255,0.1); color: var(--cyan); }
+  #mic-btn.active {
+    background: rgba(0,229,255,0.15);
+    color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0,229,255,0.25);
+    animation: mic-pulse 0.9s ease-in-out infinite;
+  }
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(0,229,255,0.2); }
+    50%       { box-shadow: 0 0 22px rgba(0,229,255,0.45); }
+  }
+
+  #send-btn {
+    background: linear-gradient(135deg, rgba(0,180,220,0.9), rgba(0,100,180,0.9));
+    color: #fff;
+    box-shadow: 0 0 18px rgba(0,180,220,0.3);
+  }
+  #send-btn:hover {
+    background: linear-gradient(135deg, rgba(0,210,250,0.95), rgba(0,130,210,0.95));
+    box-shadow: 0 0 26px rgba(0,200,240,0.4);
+  }
+  #send-btn:disabled {
+    background: var(--border);
+    box-shadow: none;
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  #hint {
+    position: absolute;
+    bottom: 6px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    opacity: 0.5;
+  }
+
+  /* ── Scrollbar for chat ───────────────────────────────────── */
+  @media (max-width: 700px) {
+    #app { grid-template-columns: 1fr; }
+    #sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <div class="brand">N<span>ova</span> / AI</div>
+
+    <div id="orb-wrap">
+      <!-- Rings -->
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <!-- Sonar (listening) -->
+      <div class="sonar"></div>
+      <div class="sonar"></div>
+      <!-- Orb core -->
+      <div id="orb"></div>
+      <!-- Particle dots (thinking) -->
+      <div class="particles">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <!-- Wave bars (speaking) -->
+      <div class="wave-bars">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+      </div>
+    </div>
+
+    <div id="status-label">idle</div>
+
+    <div id="ws-dot" class="disconnected">
+      <div class="dot-icon"></div>
+      <span id="ws-label">disconnected</span>
+    </div>
+  </aside>
+
+  <!-- ── Main panel ─────────────────────────────────────────── -->
+  <div id="main">
+    <header id="header">
+      <h1>// <span>Nova</span> interface</h1>
+      <button id="clear-btn">clear session</button>
+    </header>
+
+    <div id="chat">
+      <div class="welcome">
+        <span class="welcome-name">NOVA</span>
+        neural conversation interface · v0.1<br>
+        ready for input
+      </div>
+    </div>
+
+    <div id="input-area">
+      <div id="input-row">
+        <textarea id="msg-input" placeholder="Send a message…" rows="1" autocomplete="off" spellcheck="false"></textarea>
+        <button class="icon-btn" id="mic-btn" title="Toggle microphone" aria-label="Toggle microphone">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 8 1z" fill="currentColor"/>
+            <path d="M4 8a4 4 0 0 0 8 0M8 12v3M6 15h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="send-btn" title="Send" aria-label="Send" disabled>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M14 8L2 2l3 6-3 6 12-6z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <div id="hint">enter to send · shift+enter for newline</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   Nova — core logic
+   ═══════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const chat     = $('chat');
+  const input    = $('msg-input');
+  const sendBtn  = $('send-btn');
+  const micBtn   = $('mic-btn');
+  const clearBtn = $('clear-btn');
+  const wsDot    = $('ws-dot');
+  const wsLabel  = $('ws-label');
+  const statusLbl = $('status-label');
+
+  let micActive = false;
+  let currentState = 'idle';
+  let typingEl = null;
+
+  /* ── Markdown parser (minimal, safe) ─────────────────────── */
+  function parseMarkdown(raw) {
+    let s = raw
+      // Escape HTML entities first
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Fenced code blocks
+    s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre><code class="lang-${lang}">${code.trimEnd()}</code></pre>`
+    );
+
+    // Inline code
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Headers
+    s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    s = s.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+    s = s.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+
+    // Bold / italic
+    s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    s = s.replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>');
+    s = s.replace(/\*(.+?)\*/g,         '<em>$1</em>');
+    s = s.replace(/_(.+?)_/g,           '<em>$1</em>');
+
+    // Blockquote
+    s = s.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+    // Unordered list
+    s = s.replace(/^\s*[-*+] (.+)$/gm, '<li>$1</li>');
+    s = s.replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>');
+
+    // Ordered list
+    s = s.replace(/^\s*\d+\. (.+)$/gm, '<li>$1</li>');
+
+    // Links
+    s = s.replace(/\[([^\]]+)]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    // Line breaks → paragraphs
+    const blocks = s.split(/\n{2,}/);
+    s = blocks.map(b => {
+      b = b.trim();
+      if (!b) return '';
+      if (/^<(h[1-3]|ul|ol|pre|blockquote)/.test(b)) return b;
+      return '<p>' + b.replace(/\n/g, '<br>') + '</p>';
+    }).join('\n');
+
+    return s;
+  }
+
+  /* ── Orb state machine ────────────────────────────────────── */
+  const STATES = ['idle', 'listening', 'thinking', 'speaking'];
+
+  function setState(state) {
+    if (!STATES.includes(state)) return;
+    STATES.forEach(s => document.body.classList.remove(s));
+    if (state !== 'idle') document.body.classList.add(state);
+    currentState = state;
+    statusLbl.textContent = state;
+  }
+
+  /* ── Chat messages ────────────────────────────────────────── */
+  function addMessage(role, text) {
+    // Remove welcome screen on first message
+    const welcome = chat.querySelector('.welcome');
+    if (welcome) welcome.remove();
+
+    // Remove typing indicator if Nova is replying
+    if (typingEl && role === 'nova') {
+      typingEl.remove();
+      typingEl = null;
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = `msg ${role}`;
+
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    meta.textContent = role === 'user' ? 'you' : 'nova';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = role === 'nova'
+      ? parseMarkdown(text)
+      : escapeHtml(text).replace(/\n/g, '<br>');
+
+    wrap.appendChild(meta);
+    wrap.appendChild(bubble);
+    chat.appendChild(wrap);
+    scrollBottom();
+    return wrap;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showTyping() {
+    if (typingEl) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'msg nova';
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    meta.textContent = 'nova';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    wrap.appendChild(meta);
+    wrap.appendChild(bubble);
+    chat.appendChild(wrap);
+    typingEl = wrap;
+    scrollBottom();
+  }
+
+  function scrollBottom() {
+    requestAnimationFrame(() => { chat.scrollTop = chat.scrollHeight; });
+  }
+
+  /* ── Send message ─────────────────────────────────────────── */
+  function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    addMessage('user', text);
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    showTyping();
+    setState('thinking');
+
+    if (typeof Nova.onSend === 'function') {
+      Nova.onSend(text);
+    } else if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'user_message', text }));
+    }
+  }
+
+  /* ── Auto-resize textarea ─────────────────────────────────── */
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    sendBtn.disabled = !input.value.trim();
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!sendBtn.disabled) sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  /* ── Mic toggle ───────────────────────────────────────────── */
+  micBtn.addEventListener('click', () => {
+    micActive = !micActive;
+    micBtn.classList.toggle('active', micActive);
+    if (micActive) {
+      setState('listening');
+    } else {
+      setState('idle');
+    }
+    if (typeof Nova.onMicToggle === 'function') Nova.onMicToggle(micActive);
+  });
+
+  /* ── Clear ────────────────────────────────────────────────── */
+  clearBtn.addEventListener('click', () => {
+    chat.innerHTML = `<div class="welcome">
+      <span class="welcome-name">NOVA</span>
+      neural conversation interface · v0.1<br>
+      ready for input
+    </div>`;
+    typingEl = null;
+    setState('idle');
+  });
+
+  /* ── WebSocket ────────────────────────────────────────────── */
+  const WS_URL = 'ws://localhost:8765';
+  let ws = null;
+  let wsRetryDelay = 2000;
+  let wsRetryTimer = null;
+  let wsManualClose = false;
+
+  function setWsStatus(s) {
+    wsDot.className = s;
+    wsLabel.textContent = s;
+  }
+
+  function connectWs() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+    clearTimeout(wsRetryTimer);
+    setWsStatus('connecting');
+    try {
+      ws = new WebSocket(WS_URL);
+    } catch (e) {
+      scheduleReconnect();
+      return;
+    }
+
+    ws.addEventListener('open', () => {
+      setWsStatus('connected');
+      wsRetryDelay = 2000;
+    });
+
+    ws.addEventListener('message', evt => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch { return; }
+
+      if (msg.type === 'nova_message' && msg.text) {
+        addMessage('nova', msg.text);
+        setState('speaking');
+        const dur = Math.min(Math.max(msg.text.length * 40, 800), 5000);
+        setTimeout(() => { if (currentState === 'speaking') setState('idle'); }, dur);
+      } else if (msg.type === 'state') {
+        setState(msg.value);
+      } else if (msg.type === 'typing') {
+        if (msg.value) showTyping(); else if (typingEl) { typingEl.remove(); typingEl = null; }
+      }
+    });
+
+    ws.addEventListener('close', () => {
+      setWsStatus('disconnected');
+      if (!wsManualClose) scheduleReconnect();
+    });
+
+    ws.addEventListener('error', () => {
+      ws.close();
+    });
+  }
+
+  function scheduleReconnect() {
+    setWsStatus('disconnected');
+    wsRetryTimer = setTimeout(() => {
+      wsRetryDelay = Math.min(wsRetryDelay * 2, 30000);
+      connectWs();
+    }, wsRetryDelay);
+  }
+
+  connectWs();
+
+  /* ── Public API ───────────────────────────────────────────── */
+  window.Nova = {
+    setState,
+    addMessage,
+    onSend: null,          // hook: set to function(text){}
+    onMicToggle: null,     // hook: set to function(active){}
+    showTyping,
+    clearChat: () => clearBtn.click(),
+    getState: () => currentState,
+    ws: {
+      connect: () => { wsManualClose = false; connectWs(); },
+      disconnect: () => { wsManualClose = true; if (ws) ws.close(); },
+      send: (data) => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data)); }
+    }
+  };
+
+  /* ── Demo: cycle states on logo click ────────────────────── */
+  document.querySelector('.brand').addEventListener('click', () => {
+    const cycle = { idle: 'listening', listening: 'thinking', thinking: 'speaking', speaking: 'idle' };
+    setState(cycle[currentState] || 'idle');
+  });
+
+})();
+</script>
+</body>
+</html>

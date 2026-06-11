@@ -49,6 +49,18 @@
       "skillPath": "plugins/hookify/skills/writing-rules/SKILL.md",
       "computedHash": "429463a57a711ee42d1373a726e66ccc2189118022f0c281dbb48b28796d417f"
     },
+    "agent-browser": {
+      "source": "vercel-labs/open-agents",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/agent-browser/SKILL.md",
+      "computedHash": "e4dd2007a602262d05c0d5fc5b99b803d7f6a7cd88e2cd77705e51084b6d1fe5"
+    },
+    "baseline-ui": {
+      "source": "vercel-labs/open-agents",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/baseline-ui/SKILL.md",
+      "computedHash": "49817c981208de2f412719f7814d31eba2b2096462edc048a279d93f522cab0f"
+    },
     "brand-guidelines": {
       "source": "anthropics/skills",
       "sourceType": "github",
@@ -72,6 +84,12 @@
       "sourceType": "github",
       "skillPath": "plugins/claude-opus-4-5-migration/skills/claude-opus-4-5-migration/SKILL.md",
       "computedHash": "b03b91554e25480cd5dfdcb8e1c797a4703b9ed5e303593c9ac338d6d43c040a"
+    },
+    "copywriting": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/copywriting/SKILL.md",
+      "computedHash": "7b4220bc14efdc1f7104d6d60d60b1dd17ed94b32fa417bc377606fdf45ce744"
     },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
@@ -151,11 +169,23 @@
       "skillPath": "skills/minimalist-skill/SKILL.md",
       "computedHash": "08873a3131d3be27bef9bf3304b310b16b44ca6e3561aebe532797be3443f6bd"
     },
+    "optimise-seo": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/optimise-seo/SKILL.md",
+      "computedHash": "481be7f5483b8f143a09880b1526802218ff2a4d32453b2d07ce13c5f48f427b"
+    },
     "redesign-existing-projects": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/redesign-skill/SKILL.md",
       "computedHash": "b405eee0e0e80fc243f731d9aa368bca307e356db7e6157d27101d369dac6726"
+    },
+    "reverse-engineer-animation": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/reverse-engineer-animation/SKILL.md",
+      "computedHash": "41b5859d55a9a35cd6112e8c2d1b499159d3a3ef4bd8360c4f4eb3b0001465a9"
     },
     "stitch-design-taste": {
       "source": "Leonxlnx/taste-skill",
@@ -169,11 +199,35 @@
       "skillPath": "skills/theme-factory/SKILL.md",
       "computedHash": "598ddfa9784ae2a8c55be5dbb047b98564d875dea6f4669168a87ae1ea1a4ed3"
     },
+    "ui-animation": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-animation/SKILL.md",
+      "computedHash": "0a3e27e166d652d9fe85d00e8fa1690b46f24941906e9e2816bcf924210655c9"
+    },
+    "ui-audit": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-audit/SKILL.md",
+      "computedHash": "45fc24f7ac65bfc841d6d6d40f8c3494492cff92524b191c5b6fd690e8a702f0"
+    },
+    "ui-design": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-design/SKILL.md",
+      "computedHash": "ab2f5a02386751e19a426578c8cf48a7e2c3b78c4eabb4be6a435e750be16c15"
+    },
     "vercel-react-view-transitions": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-view-transitions/SKILL.md",
       "computedHash": "4fea9144f604256d0a21faaea904b7e205e7676e316721ba5fdd68c2600c7d42"
+    },
+    "web-animation-design": {
+      "source": "vercel-labs/open-agents",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/web-animation-design/SKILL.md",
+      "computedHash": "96ae2bb48c111f9318b5c46226417c15b5d2d8f8a8cccf78a3e0549b477e25e0"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",

@@ -32,9 +32,19 @@ between this layer and your recap / debate / coaching agents. Hand them
 
 ```bash
 cd coach_data_layer
+
+# A) Web UI — pick a player, pick a rank, see the FactPack rendered.
+python webapp/serve.py        # then open http://localhost:8000
+
+# B) Command-line demo.
 python tools/make_samples.py          # (already generated; regenerates samples)
 python examples/build_factpack_demo.py
 ```
+
+The web UI lets you choose any of the 10 sample players (or paste your own
+match.json + timeline.json), pick a rank, and shows the headline findings,
+benchmark verdicts, a gold-diff-over-time chart, the retrieved coaching
+snippets, and the full FactPack JSON your agents receive — all stdlib, no Flask.
 
 You'll see the computed findings, the benchmark table verdicts, and the RAG
 snippets — then a full `factpack.out.json` is written.

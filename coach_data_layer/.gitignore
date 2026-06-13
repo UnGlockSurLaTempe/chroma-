@@ -1,0 +1,9 @@
+# Generated artifacts
+factpack.out.json
+chroma_kb/
+ddragon_cache/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/

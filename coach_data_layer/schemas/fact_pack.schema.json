@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/lol-coach/fact_pack.schema.json",
+  "title": "FactPack",
+  "description": "Pre-computed facts for one player in one match, fed to the coaching agents instead of an early LLM summary.",
+  "type": "object",
+  "required": ["schema_version", "match", "player", "outcome_stats", "timeline_metrics", "headline_findings"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "match": {
+      "type": "object",
+      "required": ["match_id", "patch", "duration_s", "win"],
+      "properties": {
+        "match_id": {"type": ["string", "null"]},
+        "patch": {"type": "string"},
+        "queue_id": {"type": ["integer", "null"]},
+        "duration_s": {"type": "integer"},
+        "win": {"type": "boolean"}
+      }
+    },
+    "player": {
+      "type": "object",
+      "required": ["puuid", "champion", "role", "rank_context"],
+      "properties": {
+        "puuid": {"type": "string"},
+        "summoner": {"type": ["string", "null"]},
+        "champion": {"type": ["string", "null"]},
+        "role": {"type": ["string", "null"]},
+        "team_id": {"type": ["integer", "null"]},
+        "rank_context": {"type": "string"},
+        "lane_opponent": {
+          "type": ["object", "null"],
+          "properties": {
+            "champion": {"type": ["string", "null"]},
+            "puuid": {"type": ["string", "null"]}
+          }
+        }
+      }
+    },
+    "outcome_stats": {
+      "type": "object",
+      "description": "Post-game aggregates.",
+      "properties": {
+        "kda": {"type": "object"},
+        "cs": {"type": "integer"},
+        "cs_per_min": {"type": ["number", "null"]},
+        "gold": {"type": "integer"},
+        "gold_per_min": {"type": ["number", "null"]},
+        "damage_to_champions": {"type": "integer"},
+        "vision_score": {"type": "integer"},
+        "vision_score_per_min": {"type": ["number", "null"]},
+        "kill_participation": {"type": ["number", "null"]}
+      }
+    },
+    "timeline_metrics": {
+      "type": "object",
+      "description": "Snapshot metrics derived from the match timeline (the precision layer)."
+    },
+    "series": {
+      "type": "object",
+      "description": "Optional per-minute arrays for charts / deep analysis.",
+      "properties": {
+        "minute": {"type": "array", "items": {"type": "integer"}},
+        "cs": {"type": "array"},
+        "gold": {"type": "array"},
+        "xp": {"type": "array"},
+        "gold_diff": {"type": "array"},
+        "cs_diff": {"type": "array"}
+      }
+    },
+    "key_events": {
+      "type": "array",
+      "items": {"type": "object", "required": ["t_s", "min", "type"]}
+    },
+    "benchmarks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "value", "expected", "verdict", "severity"],
+        "properties": {
+          "metric": {"type": "string"},
+          "value": {"type": "number"},
+          "expected": {"type": "number"},
+          "delta": {"type": "number"},
+          "verdict": {"enum": ["strength", "on_track", "below", "weak"]},
+          "severity": {"enum": ["none", "low", "moderate", "high"]},
+          "explanation": {"type": "string"}
+        }
+      }
+    },
+    "headline_findings": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Top deterministic takeaways. The agents' focus list."
+    },
+    "grounding": {
+      "type": "object",
+      "description": "Data Dragon facts (champion/items) so agents don't hallucinate numbers."
+    },
+    "coaching_context": {
+      "type": "array",
+      "description": "Optional RAG snippets retrieved for these findings.",
+      "items": {"type": "object"}
+    }
+  }
+}

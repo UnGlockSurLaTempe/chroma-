@@ -1,0 +1,12 @@
+# The core (timeline / benchmarks / factpack / ddragon loader) needs NOTHING here.
+# These only unlock optional upgrades:
+
+# Better RAG: persistent vector DB + local sentence-embeddings (runs on a small PC).
+chromadb>=0.5
+sentence-transformers>=2.2
+
+# Validate FactPacks against schemas/fact_pack.schema.json.
+jsonschema>=4.0
+
+# Run the test suite.
+pytest>=7.0

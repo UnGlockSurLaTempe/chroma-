@@ -8,5 +8,9 @@ sentence-transformers>=2.2
 # Validate FactPacks against schemas/fact_pack.schema.json.
 jsonschema>=4.0
 
+# Agent wiring: the Claude adapter for the reasoning-heavy conclusion stage.
+# (The Ollama adapter is stdlib-only HTTP; the offline Echo adapter needs nothing.)
+anthropic>=0.40
+
 # Run the test suite.
 pytest>=7.0

@@ -111,6 +111,45 @@ live. The post-game summary alone cannot give you those.
 | `coachdata/rag/store.py` | Vector store: Chroma if installed, else keyword fallback | optional |
 | `coachdata/rag/ingest.py`| Chunk coaching markdown into the store | stdlib |
 | `coachdata/rag/retrieve.py`| Turn findings into queries, fetch snippets | stdlib |
+| `coachdata/agents/prompts.py`| Turn a FactPack into each agent's prompt (recap / debate / conclusion) | stdlib |
+| `coachdata/agents/llm.py`| Provider-neutral LLM: Claude / Ollama / offline Echo adapters | optional |
+| `coachdata/agents/pipeline.py`| Orchestrate recap → debate → conclusion | stdlib |
+
+## Agent wiring — how the FactPack feeds the agents
+
+The `agents/` package consumes a FactPack and drives your **recap → debate
+(expert vs OTP) → conclusion** flow. The key idea: **every agent reads the same
+factual briefing** (rendered from the FactPack by `prompts.render_briefing`),
+then gets a role-specific instruction. Each stage can use a *different* model.
+
+```python
+from coachdata.agents import pipeline
+from coachdata.agents.llm import make_llm
+
+llms = {
+    "recap":      make_llm("ollama", model="qwen2.5:7b"),  # cheap/bulk → local
+    "debate":     make_llm("ollama", model="qwen2.5:7b"),
+    "conclusion": make_llm("claude"),                      # reasoning-heavy → Claude
+}
+result = pipeline.run_pipeline(factpack, llms=llms, debate_rounds=2)
+# result = {"recap": str, "debate": [{speaker, text}...], "conclusion": str, ...}
+```
+
+- **Recap** — factual summary from the numbers only (cheap model).
+- **Debate** — a Challenger-expert persona and an OTP-main persona argue
+  priorities, alternating turns, each seeing the briefing + transcript so far.
+- **Conclusion** — a head-coach synthesis into a prioritized plan; routed to
+  Claude with adaptive thinking (the `think` flag on that prompt).
+
+**See the exact prompts each agent receives** (offline, no API key) — the
+default `EchoLLM` returns the assembled prompt instead of calling a model:
+
+```bash
+python examples/run_pipeline_demo.py        # prints every agent's prompt
+python examples/run_pipeline_demo.py --live # real output (Claude + Ollama)
+```
+
+The web UI's **"Show agent prompts"** button renders the same thing in the browser.
 
 Optional upgrades: `pip install chromadb sentence-transformers jsonschema`
 (see `requirements-optional.txt`).

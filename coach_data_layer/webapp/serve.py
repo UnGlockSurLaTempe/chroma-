@@ -23,6 +23,8 @@ sys.path.insert(0, ROOT)
 from coachdata import factpack, benchmarks, ddragon          # noqa: E402
 from coachdata.rag.store import KnowledgeBase                 # noqa: E402
 from coachdata.rag.ingest import ingest_dir                   # noqa: E402
+from coachdata.agents import pipeline, prompts                # noqa: E402
+from coachdata.agents.llm import EchoLLM                      # noqa: E402
 
 # Build the optional pieces once at startup.
 TABLE = benchmarks.load_table(os.path.join(ROOT, "data/benchmarks/benchmarks.sample.json"))
@@ -100,6 +102,7 @@ pre{background:#0d1117;border:1px solid var(--line);border-radius:8px;padding:12
     <div><label>Player</label><select id="player"></select></div>
     <div><label>Rank context</label><select id="rank"></select></div>
     <div><button id="run">Build FactPack ▶</button></div>
+    <div><button class="ghost" id="agents">Show agent prompts ▶</button></div>
     <div><button class="ghost" id="toggleAdv">Paste own data</button></div>
   </div>
   <div class="adv" id="adv" style="display:none">
@@ -178,16 +181,51 @@ function render(p){
       <pre>${JSON.stringify(p,null,2)}</pre></details></div>`;
 }
 
+function body(){
+  const b={puuid:$('#player').value, rank:$('#rank').value};
+  const mj=$('#matchJson').value.trim(), tj=$('#timelineJson').value.trim();
+  if(mj) b.match=JSON.parse(mj); if(tj) b.timeline=JSON.parse(tj);
+  return b;
+}
+
+function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+function renderAgents(r){
+  const dbt=(r.debate||[]).map(t=>{
+    const who = t.speaker==='expert' ? 'Challenger expert' : 'OTP main';
+    const col = t.speaker==='expert' ? 'var(--blue)' : 'var(--gold)';
+    return `<div class="snip" style="border-color:${col}"><b style="color:${col}">${who}</b>
+      <pre style="white-space:pre-wrap;margin:6px 0 0">${esc(t.text)}</pre></div>`;
+  }).join('');
+  $('#out').innerHTML = `
+    <div class="summary"><span class="champ">Agent pipeline</span>
+      <span class="tag">recap → debate → conclusion</span>
+      <span class="tag">offline preview (EchoLLM)</span></div>
+    <p class="muted">These are the EXACT prompts each agent receives, built from the FactPack.
+      Swap EchoLLM for the Claude / Ollama adapters to get real generated text.</p>
+    <div class="card"><h2>Shared briefing (every agent reads this)</h2>
+      <pre style="white-space:pre-wrap">${esc(r.briefing)}</pre></div>
+    <div class="card"><h2>① Recap agent — prompt</h2>
+      <pre style="white-space:pre-wrap">${esc(r.recap)}</pre></div>
+    <div class="card"><h2>② Debate — expert vs OTP (alternating turns)</h2>${dbt}</div>
+    <div class="card"><h2>③ Conclusion agent (→ Claude, adaptive thinking) — prompt</h2>
+      <pre style="white-space:pre-wrap">${esc(r.conclusion)}</pre></div>`;
+}
+
 $('#run').onclick = async ()=>{
   $('#out').innerHTML='<p class="muted">Building…</p>';
-  const body={puuid:$('#player').value, rank:$('#rank').value};
-  const mj=$('#matchJson').value.trim(), tj=$('#timelineJson').value.trim();
-  try{ if(mj) body.match=JSON.parse(mj); if(tj) body.timeline=JSON.parse(tj); }
-  catch(e){ $('#out').innerHTML='<p class="v-weak">Invalid JSON in pasted data: '+e.message+'</p>'; return; }
-  const res=await fetch('/api/factpack',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  const data=await res.json();
+  let b; try{ b=body(); }catch(e){ $('#out').innerHTML='<p class="v-weak">Invalid JSON: '+e.message+'</p>'; return; }
+  const data=await fetch('/api/factpack',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
   if(data.error){ $('#out').innerHTML='<p class="v-weak">'+data.error+'</p>'; return; }
   render(data);
+};
+
+$('#agents').onclick = async ()=>{
+  $('#out').innerHTML='<p class="muted">Assembling agent prompts…</p>';
+  let b; try{ b=body(); }catch(e){ $('#out').innerHTML='<p class="v-weak">Invalid JSON: '+e.message+'</p>'; return; }
+  const data=await fetch('/api/pipeline',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+  if(data.error){ $('#out').innerHTML='<p class="v-weak">'+data.error+'</p>'; return; }
+  renderAgents(data);
 };
 
 init().then(()=>$('#run').click());
@@ -220,21 +258,30 @@ class Handler(BaseHTTPRequestHandler):
             }))
         return self._send(404, json.dumps({"error": "not found"}))
 
+    def _read_pack(self):
+        length = int(self.headers.get("Content-Length", 0))
+        req = json.loads(self.rfile.read(length) or b"{}")
+        sample_match, sample_tl = _load_sample()
+        match = req.get("match") or sample_match
+        timeline = req.get("timeline") or sample_tl
+        puuid = req.get("puuid") or _participants(sample_match)[0]["puuid"]
+        rank = req.get("rank") or "DIAMOND"
+        return factpack.build_fact_pack(
+            match, timeline, puuid=puuid, rank=rank,
+            ddragon=DD, benchmark_table=TABLE, knowledge_base=KB)
+
     def do_POST(self):
-        if self.path != "/api/factpack":
-            return self._send(404, json.dumps({"error": "not found"}))
         try:
-            length = int(self.headers.get("Content-Length", 0))
-            req = json.loads(self.rfile.read(length) or b"{}")
-            sample_match, sample_tl = _load_sample()
-            match = req.get("match") or sample_match
-            timeline = req.get("timeline") or sample_tl
-            puuid = req.get("puuid") or _participants(sample_match)[0]["puuid"]
-            rank = req.get("rank") or "DIAMOND"
-            pack = factpack.build_fact_pack(
-                match, timeline, puuid=puuid, rank=rank,
-                ddragon=DD, benchmark_table=TABLE, knowledge_base=KB)
-            return self._send(200, json.dumps(pack))
+            if self.path == "/api/factpack":
+                return self._send(200, json.dumps(self._read_pack()))
+            if self.path == "/api/pipeline":
+                pack = self._read_pack()
+                # EchoLLM => returns the exact prompt each agent receives (offline,
+                # no API key). Swap in Claude/Ollama adapters to get real outputs.
+                result = pipeline.run_pipeline(pack, default=EchoLLM(), debate_rounds=2)
+                result["briefing"] = prompts.render_briefing(pack)
+                return self._send(200, json.dumps(result))
+            return self._send(404, json.dumps({"error": "not found"}))
         except Exception as e:  # surface errors to the UI
             return self._send(200, json.dumps({"error": f"{type(e).__name__}: {e}"}))
 

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LolPick — assistant de draft</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%9A%94%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">Lol<span>Pick</span></div>
+
+  <div class="roles" id="roleSelect" title="Ton rôle">
+    <button data-role="TOP">TOP</button>
+    <button data-role="JGL">JGL</button>
+    <button data-role="MID">MID</button>
+    <button data-role="BOT">BOT</button>
+    <button data-role="SUP">SUP</button>
+  </div>
+
+  <label class="chk"><input type="checkbox" id="lastPick" checked> Last pick</label>
+
+  <div class="spacer"></div>
+
+  <button class="ghost" id="btnPool">Mon pool</button>
+  <button class="ghost" id="btnDemo">Exemple</button>
+  <button class="ghost" id="btnReset">Vider</button>
+  <div class="live" id="liveStatus" title="Connexion au client League">
+    <span class="dot"></span><span class="txt">manuel</span>
+  </div>
+</header>
+
+<main>
+  <!-- ================= DRAFT ================= -->
+  <section class="panel draft">
+    <div class="team ally">
+      <h2>Ton équipe</h2>
+      <div class="slots" id="allySlots"></div>
+    </div>
+    <div class="team enemy">
+      <h2>Équipe adverse <small id="inferNote"></small></h2>
+      <div class="slots" id="enemySlots"></div>
+    </div>
+
+    <details class="bans">
+      <summary>Bans (optionnel)</summary>
+      <div class="slots compact" id="banSlots"></div>
+    </details>
+
+    <div class="sliders">
+      <label>Sécurité <input type="range" id="sRisk" min="0" max="100" value="45"> Variance
+        <em id="sRiskV">équilibré</em></label>
+      <label>Teamfight <input type="range" id="sLane" min="0" max="100" value="50"> Lane
+        <em id="sLaneV">équilibré</em></label>
+      <label class="chk"><input type="checkbox" id="poolOnly"> Uniquement mon pool</label>
+    </div>
+  </section>
+
+  <!-- ================= ANALYSE ================= -->
+  <section class="panel read" id="readPanel"></section>
+
+  <!-- ================= PICKS ================= -->
+  <section class="panel picks">
+    <h2>Picks recommandés <small id="picksSub"></small></h2>
+    <ol class="ranked" id="ranked"></ol>
+  </section>
+
+  <section class="panel tech" id="techPanel"></section>
+</main>
+
+<!-- ================= POOL ================= -->
+<div class="modal" id="poolModal" hidden>
+  <div class="modal-box">
+    <header>
+      <h2>Mon pool de champions</h2>
+      <button class="ghost" id="poolClose">Fermer</button>
+    </header>
+    <p class="hint">0 = je ne le joue pas · 1 = je dépanne · 2 = je le joue · 3 = c'est mon main.
+      Le confort compte dans le score, et le curseur « Sécurité » décide de son poids.</p>
+    <input type="search" id="poolSearch" placeholder="Filtrer…">
+    <div class="pool-grid" id="poolGrid"></div>
+  </div>
+</div>
+
+<template id="tplSlot">
+  <div class="slot">
+    <button class="role-badge"></button>
+    <div class="combo">
+      <input type="text" class="champ-input" placeholder="champion…" autocomplete="off" spellcheck="false">
+      <ul class="suggest" hidden></ul>
+    </div>
+    <button class="clear" title="Vider">×</button>
+  </div>
+</template>
+
+<script src="data/champions.js"></script>
+<script src="data/matchups.js"></script>
+<script src="data/builds.js"></script>
+<script src="data/counterpicks.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -6,10 +6,14 @@ echo   LolPick - installation
 echo   ----------------------
 echo.
 
-where python >nul 2>&1
-if errorlevel 1 goto nopython
+set "PY="
+py -3 -c "import sys" >nul 2>&1 && set "PY=py -3"
+if not defined PY (
+  python -c "import sys" >nul 2>&1 && set "PY=python"
+)
+if not defined PY goto nopython
 
-python "%~dp0install.py"
+%PY% "%~dp0install.py"
 echo.
 pause
 exit /b 0
@@ -18,7 +22,7 @@ exit /b 0
 echo   Python n'est pas installe sur cette machine.
 echo   LolPick en a besoin (une seule fois, rien d'autre a installer).
 echo.
-echo   Ouvre un terminal et lance :
+echo   Le plus simple, dans PowerShell :
 echo       winget install -e --id Python.Python.3.12
 echo.
 echo   ...ou telecharge-le sur https://www.python.org/downloads/

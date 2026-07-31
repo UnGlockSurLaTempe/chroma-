@@ -9,7 +9,18 @@ Aucune installation, aucune dépendance, aucune clé API. Tout tourne en local.
 
 ## Installer (une fois)
 
-**Windows** — double-clic sur **`Installer LolPick.bat`**.
+**Windows, en une commande.** Ouvre PowerShell et colle :
+
+```powershell
+irm https://raw.githubusercontent.com/UnGlockSurLaTempe/chroma-/refs/heads/claude/lol-champion-picker-flyo1g/lolpick/bootstrap.ps1 | iex
+```
+
+Ça installe Python s'il manque (via winget), télécharge LolPick dans
+`%LOCALAPPDATA%\Programs\LolPick`, crée les raccourcis, active le lancement
+automatique et ouvre l'app. **Relance la même commande pour mettre à jour** —
+ou double-clic sur `Mettre a jour LolPick.bat`.
+
+**Si tu as déjà les fichiers** — double-clic sur **`Installer LolPick.bat`**.
 
 **macOS / Linux** — `./install.sh`
 

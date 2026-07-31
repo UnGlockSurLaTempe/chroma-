@@ -120,6 +120,51 @@ ok(r2.ctx.enemy.adShare >= 80, "comp adverse lue comme full AD (" + r2.ctx.enemy
 ok(r2.rules.some(function (u) { return u.id === "comp-full-ad"; }), "règle « comp full AD » déclenchée");
 ok(r2.rules.some(function (u) { return u.picks.some(function (p) { return p.champ === "Rammus"; }); }), "Rammus proposé comme contre");
 
+/* ------------------------------------------------- régressions signalées -- */
+section("Régressions signalées en partie");
+
+/* Comp Kayle / Ekko / Thresh / Samira / Zed : 3 champions AP pour 2 AD.
+   Le support était pénalisé deux fois (coefficient de rôle × output), ce qui
+   effaçait les dégâts magiques de Thresh et affichait « 60% AD ». */
+var mixed = [C("Kayle"), C("Ekko"), C("Thresh"), C("Samira"), C("Zed")].map(function (c) { return { champ: c }; });
+E.inferRoles(mixed).forEach(function (x, i) { mixed[i].role = x.role; });
+var mp = E.profile(mixed);
+ok(mp.apCount === 3 && mp.adCount === 2, "les champions sont comptés par type de dégâts",
+   mp.adCount + " AD / " + mp.apCount + " AP");
+ok(mp.apShare >= 40, "la part de dégâts magiques n'est plus écrasée (" + mp.apShare + "% AP)");
+ok(Math.abs(mp.adShare - mp.apShare) <= 15, "cette comp est lue comme mixte, pas comme AD",
+   mp.adShare + "/" + mp.apShare);
+
+/* Pick verrouillé : sa fiche doit rester accessible, y compris quand la draft
+   a mal tourné après coup. */
+var lockedDraft = {
+  role: "TOP", isLastPick: false,
+  ally: [{ champ: C("Garen"), role: "TOP" }, { champ: C("Vi"), role: "JGL" },
+         { champ: C("Orianna"), role: "MID" }, { champ: C("Jinx"), role: "BOT" },
+         { champ: null, role: "SUP" }],
+  enemy: mixed
+};
+var rl = E.recommend(lockedDraft, {});
+ok(rl.mine && rl.mine.champ.name === "Garen", "le champion déjà locké est analysé");
+ok(rl.mine.locked === true && rl.mine.rank >= 1 && rl.mine.outOf > rl.mine.rank,
+   "il est situé dans le classement (" + rl.mine.rank + "e sur " + rl.mine.outOf + ")");
+ok(E.buildFor(rl.mine.champ) && E.situationalItems(rl.mine.champ, rl.ctx).length > 0,
+   "sa fiche fournit build et objets adaptés à la draft");
+ok(!rl.ranked.some(function (s) { return s.champ.name === "Garen"; }),
+   "il n'apparaît pas en double dans les alternatives");
+
+/* Les alternatives doivent être jugées SANS ton pick : sinon un tank locké
+   prive tous les autres tanks du bonus « frontline ». */
+var sameNoMine = E.recommend({
+  role: "TOP", isLastPick: false,
+  ally: [{ champ: null, role: "TOP" }].concat(lockedDraft.ally.slice(1)),
+  enemy: mixed
+}, {});
+ok(Math.abs(sameNoMine.ranked[0].total - rl.ranked[0].total) < 0.01,
+   "les alternatives sont notées comme si ton slot était vide",
+   sameNoMine.ranked[0].champ.name + " " + sameNoMine.ranked[0].total + " vs " +
+   rl.ranked[0].champ.name + " " + rl.ranked[0].total);
+
 /* -------------------------------------------------------------- garde-fous */
 section("Garde-fous");
 var empty = { role: "TOP", isLastPick: false, ally: [], enemy: [], bans: [] };

@@ -207,7 +207,7 @@
     notes:"Bouclier magique = anti-mage total. Injouable avant 6, incontrable en late s'il a farmé." });
   C("Katarina", ["MID"], "assassin", { dmg:[20,80,0], tf:2, mob:3, heal:1,
     notes:"Resets en chaîne : si elle prend une kill, le fight s'écroule. Le CC dur et les Blessures Graves l'annulent." });
-  C("Kayle", ["TOP","MID"], "marksman", { dmg:[45,55,0], sc:[0,2,3], tb:2, peel:3, dis:2, tf:3, tk:1, mob:1,
+  C("Kayle", ["TOP","MID"], "marksman", { dmg:[35,65,0], sc:[0,2,3], tb:2, peel:3, dis:2, tf:3, tk:1, mob:1,
     notes:"R = invulnérabilité sur un allié : elle sauve le carry du wombo adverse. Dégâts mixtes AD/AP à distance en late. La lane est une phase de survie, la game se gagne après 11/16." });
   C("Kayn", ["JGL"], "assassin", { mob:3, sc:[1,3,3], heal:2, dv:3, tk:2,
     notes:"Forme rouge = bruiseur qui soigne, forme bleue = assassin qui traverse les murs. La forme se choisit selon la comp adverse." });

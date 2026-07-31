@@ -124,15 +124,22 @@
       immobiles: 0, shielders: 0, shielderNames: [], projectiles: 0, engageUlts: 0,
       critCarries: 0, critNames: [], aaCarries: 0, mrBuyers: 0, suppressors: [],
       pctDamage: 0, pctNames: [], apBurst: 0, apBurstNames: [], diveThreat: 0,
-      scaling: [0, 0, 0], hypercarry: null, splitpusher: null, meleeCount: 0
+      scaling: [0, 0, 0], hypercarry: null, splitpusher: null, meleeCount: 0,
+      /* Nombre de champions par type de dégâts : un pourcentage seul se lit mal
+         (« 55% AD » alors que 3 champions sur 5 sont AP), il faut les deux. */
+      adCount: 0, apCount: 0, mixedCount: 0
     };
     if (!champs.length) return p;
 
     var wsum = 0, ad = 0, ap = 0, tr = 0;
     champs.forEach(function (t) {
       var c = t.champ;
-      /* le mix de dégâts est pondéré par ce que le champion inflige vraiment */
-      var w = ((t.role === "SUP") ? 0.55 : 1) * output(c);
+      /* Le mix de dégâts est pondéré par ce que le champion inflige vraiment.
+         Pas de malus supplémentaire pour le support : `output` encode déjà la
+         faible contribution des catchers (0.5) et des enchanteurs (0.3), et le
+         cumuler avec un coefficient de rôle effaçait presque le support du
+         calcul — un Thresh AP ne comptait plus que pour 0.275. */
+      var w = output(c);
       wsum += w; ad += c.dmg[0] * w; ap += c.dmg[1] * w; tr += c.dmg[2] * w;
 
       p.engage += c.eng; p.peel += c.peel; p.tankbust += c.hp + c.tb;
@@ -157,6 +164,9 @@
       else if (c.dmg[1] >= 60 && (c.cls === "assassin" || c.cls === "mageBurst")) { p.apBurst++; p.apBurstNames.push(c.name); }
       if (c.rng === 0) p.meleeCount++;
       if (c.tk >= 3) p.mrBuyers++;
+      if (c.dmg[0] >= 65) p.adCount++;
+      else if (c.dmg[1] >= 65) p.apCount++;
+      else p.mixedCount++;
     });
 
     p.adShare = Math.round(ad / wsum);
@@ -492,7 +502,31 @@
 
   function recommend(draft, opts) {
     opts = opts || {};
+
+    /* Ton champion, s'il est déjà locké. On le note quand même : c'est le
+       moment où tu as le plus besoin de sa fiche (build, objets, plan de jeu),
+       surtout s'il colle mal à la draft finale. */
+    var mineEntry = null;
+    (draft.ally || []).forEach(function (t) {
+      if (t && t.champ && t.role === draft.role) mineEntry = t;
+    });
+
     var ctx = buildContext(draft);
+
+    /* Les alternatives, elles, doivent être jugées SANS ton pick dans la comp,
+       sinon un tank locké fait perdre le bonus « frontline » à tous les autres
+       tanks et l'offre aux carries : exactement l'inverse de ce qu'on veut. */
+    var ctxAlt = ctx;
+    if (mineEntry) {
+      ctxAlt = buildContext({
+        role: draft.role, isLastPick: draft.isLastPick, bans: draft.bans,
+        enemy: draft.enemy,
+        ally: draft.ally.map(function (t) {
+          return t === mineEntry ? { champ: null, role: t.role } : t;
+        })
+      });
+    }
+
     var taken = {};
     [].concat(draft.ally, draft.enemy, draft.bans || []).forEach(function (t) {
       if (t && t.champ) taken[t.champ.key] = 1;
@@ -506,8 +540,17 @@
       return true;
     });
 
-    var scored = candidates.map(function (c) { return scoreCandidate(c, ctx, opts); })
+    var scored = candidates.map(function (c) { return scoreCandidate(c, ctxAlt, opts); })
                            .sort(function (a, b) { return b.total - a.total; });
+
+    var mine = null;
+    if (mineEntry) {
+      mine = scoreCandidate(mineEntry.champ, ctx, opts);
+      mine.locked = true;
+      mine.rank = 1 + scored.filter(function (s) { return s.total > mine.total; }).length;
+      mine.outOf = scored.length + 1;
+      mine.better = scored.filter(function (s) { return s.total > mine.total + 3; });
+    }
 
     /* Règles counterpick déclenchées (pour la section « picks tech ») */
     var firedRules = [];
@@ -521,7 +564,7 @@
       if (picks.length || r.items) firedRules.push({ id: r.id, title: r.title, explain: r.explain(ctx), picks: picks, items: r.items || [] });
     });
 
-    return { ctx: ctx, ranked: scored, rules: firedRules };
+    return { ctx: ctx, ranked: scored, rules: firedRules, mine: mine };
   }
 
   /* ====================================================================== */

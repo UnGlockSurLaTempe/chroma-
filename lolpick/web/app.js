@@ -252,13 +252,22 @@
     }
 
     var list = r.ranked;
-    if (!list.length) {
+    var locked = r.mine;          // ton champion, s'il est déjà locké
+    if (!list.length && !locked) {
       p.innerHTML = '<h2>Ton pick</h2><p class="empty">Aucun candidat pour ce rôle : ton pool est vide, ' +
                     "ou tout est déjà pick/ban.</p>";
       return;
     }
 
-    var s = list.filter(function (x) { return x.champ.key === state.focus; })[0] || list[0];
+    /* Un pick verrouillé prend la vedette : c'est là qu'on a le plus besoin de
+       sa fiche, surtout quand la draft a mal tourné après coup. */
+    var s = null;
+    if (state.focus) {
+      s = (locked && locked.champ.key === state.focus)
+        ? locked
+        : list.filter(function (x) { return x.champ.key === state.focus; })[0];
+    }
+    if (!s) s = locked || list[0];
     var b = E.buildFor(s.champ);
     var items = E.situationalItems(s.champ, r.ctx);
     var reasons = s.reasons.slice(0, 3);
@@ -267,7 +276,8 @@
 
     var html =
       '<div class="hero-top"><div>' +
-        '<span class="hero-label">Ton pick · ' + state.role + (ctxLastPick() ? " · last pick" : "") + "</span>" +
+        '<span class="hero-label">Ton pick · ' + state.role +
+          (s.locked ? " · verrouillé" : (ctxLastPick() ? " · last pick" : "")) + "</span>" +
         '<div class="hero-name">' + esc(s.champ.name) +
           (s.tech.some(function (t) { return t.risk >= 2; }) ? '<span class="flag">TECH</span>' : "") +
           (s.champ.low ? '<span class="low" title="données à revérifier">⚠</span>' : "") +
@@ -279,6 +289,15 @@
         (s.traps.length ? '<li class="neg">' + esc(s.traps[0].why) + "</li>" : "") +
       "</ul>";
 
+    if (s.locked) {
+      html += '<div class="hero-line">' + esc(
+        s.rank === 1
+          ? "C'est le meilleur choix possible sur cette draft."
+          : "Classé " + s.rank + "e sur " + s.outOf + " pour cette draft. " +
+            "Tu es locké : voilà comment le jouer quand même."
+      ) + "</div>";
+    }
+
     if (b) {
       html += '<div class="hero-line"><b>Build</b> · ' + (b.core || []).slice(0, 3).map(esc).join(" → ") +
               (items.length ? "<br><b>Contre cette draft</b> · " +
@@ -289,12 +308,24 @@
     html += '<div class="hero-actions"><button class="hero-more" id="heroMore">' +
             (state.open === s.champ.key ? "Masquer le détail" : "Tout le détail") + "</button></div>";
 
-    var others = list.filter(function (x) { return x.champ.key !== s.champ.key; }).slice(0, 5);
-    if (others.length) {
-      html += '<div class="alts"><span>Sinon</span>' + others.map(function (o) {
-        return '<button class="alt" data-k="' + o.champ.key + '"><b>' + esc(o.champ.name) +
-               "</b><i>" + Math.round(o.total) + "</i></button>";
-      }).join("") + "</div>";
+    var others, altLabel = "Sinon";
+    if (s.locked && s.better && s.better.length) {
+      others = s.better.slice(0, 5);
+      altLabel = "Aurait mieux collé";
+    } else {
+      others = list.filter(function (x) { return x.champ.key !== s.champ.key; }).slice(0, 5);
+    }
+    var backToLocked = locked && s.champ.key !== locked.champ.key;
+    if (others.length || backToLocked) {
+      html += '<div class="alts"><span>' + altLabel + "</span>" +
+        (backToLocked
+          ? '<button class="alt" data-k="' + locked.champ.key + '">↩ <b>' + esc(locked.champ.name) +
+            "</b><i>ton pick</i></button>"
+          : "") +
+        others.map(function (o) {
+          return '<button class="alt" data-k="' + o.champ.key + '"><b>' + esc(o.champ.name) +
+                 "</b><i>" + Math.round(o.total) + "</i></button>";
+        }).join("") + "</div>";
     }
     html += '<div class="hero-detail" id="heroDetail"></div>';
 
@@ -327,11 +358,18 @@
       return '<div class="dmgbar"><i class="ad" style="width:' + t.adShare + '%"></i>' +
              '<i class="ap" style="width:' + t.apShare + '%"></i>' +
              '<i class="tr" style="width:' + t.trueShare + '%"></i></div>' +
-             '<div class="legend">' + t.adShare + "% AD · " + t.apShare + "% AP · " + t.trueShare + "% brut</div>";
+             '<div class="legend">' + t.adShare + "% AD · " + t.apShare + "% AP · " + t.trueShare + "% brut" +
+             /* le pourcentage seul induit en erreur : on donne aussi le compte
+                de champions par type (« 55% AD » avec 3 AP sur 5, ça se lit mal) */
+             (t.count ? "  —  " + t.adCount + " AD / " + t.apCount + " AP" +
+                        (t.mixedCount ? " / " + t.mixedCount + " mixte" : "") : "") +
+             "</div>";
     }
 
     var chips = [];
     function chip(txt, cls) { chips.push('<span class="chip ' + (cls || "") + '">' + esc(txt) + "</span>"); }
+    if (x.enemy.count >= 4 && x.enemy.adShare >= 35 && x.enemy.apShare >= 35)
+      chip("Dégâts mixtes en face : une seule résistance ne suffira pas", "warn");
     if (x.enemy.beefy >= 2) chip(x.enemy.beefy + " empileurs de résistances/PV", "bad");
     if (x.enemy.engageUlts >= 2) chip(x.enemy.engageUlts + " ults d'engage", "bad");
     if (x.enemy.hardCC >= 4) chip(x.enemy.hardCC + " sources de CC dur", "bad");

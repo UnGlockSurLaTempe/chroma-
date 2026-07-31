@@ -69,39 +69,39 @@
   /* ------------------------------------------------------------------ */
   var SITUATIONAL = [
     { item:"Lord Dominik's Regards", prio:9,
-      when:function (x, me) { return me.dmgAD >= 60 && me.crit && x.enemy.beefy >= 2; },
+      when:function (x, me) { return me.dealer && me.dmgAD >= 60 && me.crit && x.enemy.beefy >= 2; },
       why:function (x) { return "Ils ont " + x.enemy.beefy + " empileurs de résistances/PV : sans %pénétration d'armure tu ne les tues pas."; } },
 
     { item:"Serylda's Grudge", prio:9,
-      when:function (x, me) { return me.dmgAD >= 60 && !me.crit && x.enemy.beefy >= 2; },
+      when:function (x, me) { return me.dealer && me.dmgAD >= 60 && !me.crit && x.enemy.beefy >= 2; },
       why:function () { return "AD sans crit contre de l'armure empilée : %pénétration obligatoire."; } },
 
     { item:"Black Cleaver", prio:8,
-      when:function (x, me) { return me.dmgAD >= 60 && !me.crit && x.enemy.beefy >= 2 && x.ally.adShare >= 55; },
+      when:function (x, me) { return me.dealer && me.dmgAD >= 60 && !me.crit && x.enemy.beefy >= 2 && x.ally.adShare >= 55; },
       why:function () { return "Ton équipe est majoritairement AD : la réduction d'armure profite à tout le monde."; } },
 
     { item:"Blade of the Ruined King", prio:9,
-      when:function (x, me) { return me.onhit && x.enemy.beefy >= 2; },
+      when:function (x, me) { return me.dealer && me.onhit && me.dmgAD >= 50 && x.enemy.beefy >= 2; },
       why:function () { return "Dégâts %PV max sur auto : c'est ce qui fait fondre les gros sacs de PV."; } },
 
     { item:"Void Staff", prio:9,
-      when:function (x, me) { return me.dmgAP >= 55 && (x.enemy.beefy >= 2 || x.enemy.mrBuyers >= 2); },
+      when:function (x, me) { return me.dealer && me.dmgAP >= 55 && (x.enemy.beefy >= 2 || x.enemy.mrBuyers >= 2); },
       why:function () { return "Ils vont empiler de la MR ou ont déjà des PV/résistances : sans %pénétration magique tes dégâts s'écroulent."; } },
 
     { item:"Liandry's Anguish", prio:8,
-      when:function (x, me) { return me.dmgAP >= 55 && x.enemy.hpStack >= 2; },
+      when:function (x, me) { return me.dealer && me.dmgAP >= 55 && x.enemy.hpStack >= 2; },
       why:function (x) { return "Dégâts %PV max continus contre " + x.enemy.hpStack + " empileurs de PV."; } },
 
     { item:"Mortal Reminder", prio:10,
-      when:function (x, me) { return me.dmgAD >= 60 && x.enemy.healers >= 2; },
+      when:function (x, me) { return me.dealer && me.dmgAD >= 60 && x.enemy.healers >= 2; },
       why:function (x) { return "Blessures Graves : " + x.enemy.healerNames.join(", ") + " annulent tes dégâts sinon."; } },
 
     { item:"Morellonomicon", prio:10,
-      when:function (x, me) { return me.dmgAP >= 55 && x.enemy.healers >= 2; },
+      when:function (x, me) { return me.dealer && me.dmgAP >= 55 && x.enemy.healers >= 2; },
       why:function (x) { return "Blessures Graves AP contre " + x.enemy.healerNames.join(", ") + "."; } },
 
     { item:"Executioner's Calling", prio:10,
-      when:function (x, me) { return me.dmgAD >= 60 && x.enemy.laneHealer; },
+      when:function (x, me) { return (me.dealer || me.melee) && me.dmgAD >= 60 && x.enemy.laneHealer; },
       why:function (x) { return "À acheter DÈS la lane : " + x.enemy.laneHealer + " se soigne trop pour être tué sans anti-heal."; } },
 
     { item:"Oblivion Orb", prio:10,
@@ -111,6 +111,10 @@
     { item:"Bramble Vest", prio:7,
       when:function (x, me) { return me.melee && x.enemy.laneHealer && me.tanky; },
       why:function () { return "Armure + Blessures Graves au contact, très rentable en lane."; } },
+
+    { item:"Thornmail / Chempunk Chainsword", prio:9,
+      when:function (x, me) { return !me.dealer && x.enemy.healers >= 2; },
+      why:function (x) { return "Même en tank, il te faut des Blessures Graves contre " + x.enemy.healerNames.join(", ") + " : Thornmail si tu prends des auto-attaques, Chempunk sinon."; } },
 
     { item:"Force of Nature", prio:8,
       when:function (x, me) { return me.tanky && x.enemy.apShare >= 60; },
@@ -125,11 +129,11 @@
       why:function () { return "MR + dégâts magiques sur auto : tu tanks leur AP tout en tapant plus fort."; } },
 
     { item:"Maw of Malmortius", prio:7,
-      when:function (x, me) { return me.dmgAD >= 60 && !me.tanky && x.enemy.apBurst >= 1; },
+      when:function (x, me) { return me.dealer && me.dmgAD >= 60 && !me.tanky && x.enemy.apBurst >= 1; },
       why:function (x) { return "Bouclier de sort contre le burst AP (" + x.enemy.apBurstNames.join(", ") + ")."; } },
 
     { item:"Hexdrinker", prio:8,
-      when:function (x, me) { return me.dmgAD >= 60 && x.enemy.laneAP; },
+      when:function (x, me) { return me.dealer && me.dmgAD >= 60 && x.enemy.laneAP; },
       why:function (x) { return "Composant à acheter en lane : " + x.enemy.laneAP + " te burst sinon."; } },
 
     { item:"Thornmail", prio:7,
@@ -153,7 +157,7 @@
       why:function (x) { return "Ils ont " + x.enemy.suppressors.join(", ") + " : seul un QSS te sort de ça (ni tenacité ni cleanse ne marchent)."; } },
 
     { item:"Zhonya's Hourglass", prio:8,
-      when:function (x, me) { return me.dmgAP >= 55 && (x.enemy.assassins >= 1 || x.enemy.diveThreat >= 2); },
+      when:function (x, me) { return me.dealer && me.dmgAP >= 55 && (x.enemy.assassins >= 1 || x.enemy.diveThreat >= 2); },
       why:function () { return "La stase annule le focus : c'est le bouton qui te fait survivre au premier engage."; } },
 
     { item:"Guardian Angel", prio:6,
@@ -161,7 +165,7 @@
       why:function () { return "Deux assassins te ciblent : la résurrection leur coûte tout leur cooldown."; } },
 
     { item:"Serpent's Fang", prio:6,
-      when:function (x, me) { return me.dmgAD >= 60 && x.enemy.shielders >= 2; },
+      when:function (x, me) { return me.dealer && me.dmgAD >= 60 && x.enemy.shielders >= 2; },
       why:function (x) { return "Beaucoup de boucliers en face (" + x.enemy.shielderNames.join(", ") + ") : Serpent's Fang les supprime."; } },
 
     { item:"Anathema's Chains", prio:5,

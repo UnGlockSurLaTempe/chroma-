@@ -29,7 +29,7 @@
     "Bel'Veth", "Nilah", "Kai'Sa", "Twitch", "Varus", "Xayah", "Zeri", "Kindred", "Shyvana"].map(N);
 
   /* Champions à crit (règles d'items) */
-  var CRIT = ["Caitlyn", "Jinx", "Draven", "Tryndamere", "Yasuo", "Yone", "Gangplank", "Aphelios",
+  var CRIT = ["Caitlyn", "Jinx", "Draven", "Vayne", "Tryndamere", "Yasuo", "Yone", "Gangplank", "Aphelios",
     "Jhin", "Xayah", "Sivir", "Samira", "Miss Fortune", "Quinn", "Ashe", "Zeri", "Smolder", "Yunara"].map(N);
 
   /* Part de dégâts réellement infligée par un champion : le 65% AP d'un
@@ -385,8 +385,11 @@
     /* --- axe 6 : confort ---------------------------------------------- */
     var pool = opts.pool || {};
     var lvl = pool[cand.key];
-    var comfort = (lvl === undefined) ? 35 : [20, 55, 80, 100][lvl];
-    if (lvl === undefined) warnings.push("Hors de ton pool déclaré");
+    var poolDeclared = Object.keys(pool).length > 0;
+    var comfort = (lvl === undefined) ? (poolDeclared ? 35 : 60) : [20, 55, 80, 100][lvl];
+    /* tant qu'aucun pool n'est déclaré, tout le monde est logé à la même
+       enseigne : inutile d'afficher l'avertissement sur chaque candidat */
+    if (lvl === undefined && poolDeclared) warnings.push("Hors de ton pool déclaré");
 
     /* --- pièges -------------------------------------------------------- */
     var traps = [];
@@ -461,7 +464,10 @@
       dmgAD: cand.dmg[0], dmgAP: cand.dmg[1],
       crit: has(CRIT, cand), onhit: has(ONHIT, cand),
       melee: cand.rng === 0, tanky: cand.tk >= 3,
-      carry: cand.tf >= 3 && cand.tk <= 1
+      carry: cand.tf >= 3 && cand.tk <= 1,
+      /* un tank a beau être « 60% AD », il n'achète pas de pénétration :
+         les objets offensifs ne sont proposés qu'aux vraies sources de dégâts */
+      dealer: output(cand) >= 0.7
     };
     var out = [];
     (global.LP_SITUATIONAL || []).forEach(function (r) {

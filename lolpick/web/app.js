@@ -18,7 +18,9 @@
     risk: 0.45,
     laneFocus: 0.5,
     poolOnly: false,
+    expert: false,
     open: null,
+    focus: null,
     auto: false,
     lastSig: ""
   };
@@ -30,7 +32,7 @@
     try {
       localStorage.setItem(LS, JSON.stringify({
         pool: state.pool, role: state.role, risk: state.risk,
-        laneFocus: state.laneFocus, poolOnly: state.poolOnly
+        laneFocus: state.laneFocus, poolOnly: state.poolOnly, expert: state.expert
       }));
     } catch (e) {}
   }
@@ -42,6 +44,7 @@
       if (typeof d.risk === "number") state.risk = d.risk;
       if (typeof d.laneFocus === "number") state.laneFocus = d.laneFocus;
       state.poolOnly = !!d.poolOnly;
+      state.expert = !!d.expert;
     } catch (e) {}
   }
 
@@ -79,7 +82,10 @@
     if (kind === "ban") { badge.remove(); }
     else {
       badge.textContent = entry.role || "?";
-      if (kind === "ally" && entry.role === state.role) { badge.classList.add("mine"); badge.textContent = "TOI"; }
+      if (kind === "ally" && entry.role === state.role) {
+        badge.classList.add("mine"); badge.textContent = "TOI";
+        node.dataset.mine = "1";   // slot de ton pick : jamais ciblé par l'enchaînement du focus
+      }
       if (kind === "enemy" && entry.inferred) badge.classList.add("guess");
       badge.title = kind === "enemy"
         ? "Rôle déduit — clique pour forcer un rôle"
@@ -110,6 +116,7 @@
     }
     function choose(c) {
       entry.champ = c; closeSug(); input.blur(); render();
+      focusNextEmpty(kind, index);   // enchaîner la saisie sans toucher la souris
     }
     input.oninput = function () { openSug(input.value); };
     input.onfocus = function () { input.select(); if (input.value) openSug(input.value); };
@@ -132,6 +139,26 @@
     };
     clear.onclick = function () { entry.champ = null; entry.forced = null; render(); };
     return node;
+  }
+
+  /* Après un choix, on met le curseur dans le prochain slot vide : la draft
+     entière se remplit au clavier, sans jamais reprendre la souris.        */
+  function focusNextEmpty(kind, index) {
+    var container = { ally: "#allySlots", enemy: "#enemySlots", ban: "#banSlots" }[kind];
+    function empties(sel) {
+      return Array.prototype.filter.call(
+        document.querySelectorAll(sel + " .slot"),
+        function (s) { return !s.dataset.mine && !s.querySelector(".champ-input").value; }
+      ).map(function (s) { return s.querySelector(".champ-input"); });
+    }
+    var same = Array.prototype.slice.call(document.querySelectorAll(container + " .slot"));
+    for (var i = index + 1; i < same.length; i++) {
+      if (!same[i].dataset.mine && !same[i].querySelector(".champ-input").value) {
+        return same[i].querySelector(".champ-input").focus();
+      }
+    }
+    var rest = empties("#enemySlots").concat(empties("#allySlots"));
+    if (rest.length) rest[0].focus();
   }
 
   /* ------------------------------------------------------------------ */
@@ -157,6 +184,7 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
 
   function render() {
+    state.focus = null;   // la draft a changé : on repart sur le meilleur pick
     assignEnemyRoles();
 
     document.querySelectorAll("#roleSelect button").forEach(function (b) {
@@ -187,19 +215,104 @@
   }
 
   function analyse() {
+    document.body.classList.toggle("simple", !state.expert);
+    document.getElementById("btnMode").textContent = state.expert ? "Mode simple" : "Mode expert";
+
     var draft = draftForEngine();
-    var anyEnemy = draft.enemy.some(function (e) { return e.champ; });
-    var anyAlly = draft.ally.some(function (e) { return e.champ; });
+    var known = draft.enemy.filter(function (e) { return e.champ; }).length +
+                draft.ally.filter(function (e) { return e.champ; }).length;
 
     var r = E.recommend(draft, {
       pool: state.pool, poolOnly: state.poolOnly,
       risk: state.risk, laneFocus: state.laneFocus
     });
 
-    renderRead(r.ctx, anyEnemy || anyAlly);
+    renderHero(r, known);
+    renderRead(r.ctx, known > 0);
     renderRanked(r);
     renderTech(r);
   }
+
+  /* -------------------- carte « ton pick » --------------------------- */
+  function renderHero(r, known) {
+    var p = document.getElementById("heroPanel");
+
+    if (!known) {
+      p.innerHTML =
+        '<h2>Comment ça marche</h2><div class="onboard">' +
+        "<ol>" +
+        "<li>Choisis <b>ton rôle</b> en haut, et coche <b>Last pick</b> si tu passes en dernier.</li>" +
+        "<li>Remplis la draft : tape 3 lettres et <b>Entrée</b>. Le curseur saute tout seul au slot suivant. " +
+        "Les alias marchent (<b>morde</b>, <b>mf</b>, <b>j4</b>, <b>ww</b>, <b>cho</b>…).</li>" +
+        "<li>Ton pick s'affiche ici, avec le pourquoi, le build et les objets adaptés à cette draft.</li>" +
+        "</ol>" +
+        "<p>Si League tourne sur cette machine, la draft se remplit toute seule — tu n'as rien à taper. " +
+        'Le bouton <b>Exemple</b> charge une draft de démonstration.</p></div>';
+      return;
+    }
+
+    var list = r.ranked;
+    if (!list.length) {
+      p.innerHTML = '<h2>Ton pick</h2><p class="empty">Aucun candidat pour ce rôle : ton pool est vide, ' +
+                    "ou tout est déjà pick/ban.</p>";
+      return;
+    }
+
+    var s = list.filter(function (x) { return x.champ.key === state.focus; })[0] || list[0];
+    var b = E.buildFor(s.champ);
+    var items = E.situationalItems(s.champ, r.ctx);
+    var reasons = s.reasons.slice(0, 3);
+    if (!reasons.length) reasons = [s.matchup && s.matchup.value >= 0
+      ? "Pas de contre-indication sur ce matchup" : "Le moins mauvais compromis sur cette draft"];
+
+    var html =
+      '<div class="hero-top"><div>' +
+        '<span class="hero-label">Ton pick · ' + state.role + (ctxLastPick() ? " · last pick" : "") + "</span>" +
+        '<div class="hero-name">' + esc(s.champ.name) +
+          (s.tech.some(function (t) { return t.risk >= 2; }) ? '<span class="flag">TECH</span>' : "") +
+          (s.champ.low ? '<span class="low" title="données à revérifier">⚠</span>' : "") +
+        "</div></div>" +
+        '<div class="hero-score"><b>' + Math.round(s.total) + "</b><span>sur 100</span></div>" +
+      "</div>" +
+      '<ul class="hero-why">' + reasons.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") +
+        (s.warnings.length ? '<li class="neg">' + esc(s.warnings[0]) + "</li>" : "") +
+        (s.traps.length ? '<li class="neg">' + esc(s.traps[0].why) + "</li>" : "") +
+      "</ul>";
+
+    if (b) {
+      html += '<div class="hero-line"><b>Build</b> · ' + (b.core || []).slice(0, 3).map(esc).join(" → ") +
+              (items.length ? "<br><b>Contre cette draft</b> · " +
+                items.slice(0, 3).map(function (i) { return esc(i.item); }).join(" · ") : "") +
+              "</div>";
+    }
+
+    html += '<div class="hero-actions"><button class="hero-more" id="heroMore">' +
+            (state.open === s.champ.key ? "Masquer le détail" : "Tout le détail") + "</button></div>";
+
+    var others = list.filter(function (x) { return x.champ.key !== s.champ.key; }).slice(0, 5);
+    if (others.length) {
+      html += '<div class="alts"><span>Sinon</span>' + others.map(function (o) {
+        return '<button class="alt" data-k="' + o.champ.key + '"><b>' + esc(o.champ.name) +
+               "</b><i>" + Math.round(o.total) + "</i></button>";
+      }).join("") + "</div>";
+    }
+    html += '<div class="hero-detail" id="heroDetail"></div>';
+
+    p.innerHTML = "<h2>Recommandation</h2>" + html;
+
+    if (state.open === s.champ.key) {
+      document.getElementById("heroDetail").appendChild(detail(s, r.ctx));
+    }
+    document.getElementById("heroMore").onclick = function () {
+      state.open = (state.open === s.champ.key) ? null : s.champ.key;
+      analyse();
+    };
+    p.querySelectorAll(".alt").forEach(function (btn) {
+      btn.onclick = function () { state.focus = btn.dataset.k; state.open = null; analyse(); };
+    });
+  }
+
+  function ctxLastPick() { return state.isLastPick; }
 
   /* -------------------- lecture de draft ---------------------------- */
   function renderRead(x, any) {
@@ -247,15 +360,19 @@
         '<span class="verdict ' + v[0] + '">' + v[1] + "</span></div>";
     });
 
+    /* En mode simple on ne garde que les 4 alertes les plus fortes ;
+       le reste (verdicts de lane, besoins détaillés) passe en mode expert. */
     p.innerHTML =
       "<h2>Lecture de la draft</h2>" +
       '<div class="readrow"><b>Ton équipe</b><div>' + bar(x.ally) + "</div></div>" +
       '<div class="readrow"><b>Adversaire</b><div>' + bar(x.enemy) + "</div></div>" +
-      '<div class="chips">' + chips.join("") + "</div>" +
-      (lanes ? '<div class="lanes">' + lanes + "</div>" : "") +
+      '<div class="chips">' + chips.slice(0, 4).join("") +
+        (chips.length > 4 ? '<span class="adv" style="display:contents">' + chips.slice(4).join("") + "</span>" : "") +
+      "</div>" +
+      (lanes ? '<div class="lanes adv">' + lanes + "</div>" : "") +
       '<div class="plan"><b>Comment cette game se gagne</b>' + esc(x.plan.text) + "</div>" +
       (x.plan.needs.length
-        ? "<ul class=\"needs\"><li>Il manque " + x.plan.needs.map(esc).join("</li><li>Il manque ") + "</li></ul>"
+        ? "<ul class=\"needs adv\"><li>Il manque " + x.plan.needs.map(esc).join("</li><li>Il manque ") + "</li></ul>"
         : "");
   }
 
@@ -410,10 +527,10 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })
       .then(function (d) {
-        if (!d) { setLive(false, "manuel"); return; }
-        if (!d.clientFound) { setLive(false, "client non détecté"); return; }
-        if (!d.active) { setLive(true, "client OK — hors champ select"); return; }
-        setLive(true, "champ select en direct");
+        if (!d) { setLive(false, "saisie manuelle"); return; }
+        if (!d.clientFound) { setLive(false, "League non lancé"); return; }
+        if (!d.active) { setLive(true, "League lancé — en attente du champ select"); return; }
+        setLive(true, "champ select détecté");
         applySession(d);
       });
   }
@@ -424,6 +541,10 @@
     state.lastSig = sig;
 
     if (d.myPosition && ROLES.indexOf(d.myPosition) !== -1) state.role = d.myPosition;
+    if (typeof d.isLastPick === "boolean") {
+      state.isLastPick = d.isLastPick;
+      document.getElementById("lastPick").checked = d.isLastPick;
+    }
 
     state.ally.forEach(function (e) { e.champ = null; });
     (d.myTeam || []).forEach(function (p) {
@@ -488,6 +609,9 @@
       b.onclick = function () { state.role = b.dataset.role; state.open = null; save(); render(); };
     });
     document.getElementById("lastPick").onchange = function (e) { state.isLastPick = e.target.checked; analyse(); };
+    document.getElementById("btnMode").onclick = function () {
+      state.expert = !state.expert; state.open = null; save(); analyse();
+    };
     document.getElementById("btnDemo").onclick = demo;
     document.getElementById("btnReset").onclick = reset;
     document.getElementById("btnPool").onclick = function () {

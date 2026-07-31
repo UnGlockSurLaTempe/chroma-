@@ -47,17 +47,20 @@ button { font:inherit; cursor:pointer; }
 main {
   display:grid; gap:14px; padding:14px;
   grid-template-columns:minmax(340px,420px) 1fr;
-  grid-template-areas:"draft read" "draft picks" "draft tech";
+  grid-template-areas:"draft hero" "draft read" "draft picks" "draft tech";
   align-items:start; max-width:1500px; margin:0 auto;
 }
-.draft { grid-area:draft; position:sticky; top:64px; }
-.read  { grid-area:read; }
-.picks { grid-area:picks; }
-.tech  { grid-area:tech; }
+.draft      { grid-area:draft; position:sticky; top:64px; }
+.hero-panel { grid-area:hero; }
+.read       { grid-area:read; }
+.picks      { grid-area:picks; }
+.tech       { grid-area:tech; }
 @media (max-width:1000px) {
-  main { grid-template-columns:1fr; grid-template-areas:"draft" "read" "picks" "tech"; }
+  main { grid-template-columns:1fr; grid-template-areas:"draft" "hero" "read" "picks" "tech"; }
   .draft { position:static; }
 }
+/* Mode simple : on masque tout ce qui n'est pas la décision à prendre */
+body.simple .adv { display:none !important; }
 .panel { background:var(--bg2); border:1px solid var(--line); border-radius:var(--r); padding:14px; }
 .panel:empty { display:none; }
 
@@ -129,6 +132,37 @@ main {
 .v-win { background:#152420; color:#8fe0b0; }
 .v-lose { background:#2a1a1a; color:#f2a49b; }
 .v-even { background:var(--bg3); color:var(--fg2); }
+
+/* ---------- carte « ton pick » ---------- */
+.hero-panel { background:linear-gradient(160deg,#1b2130,#151a22 60%); border-color:#3a3520; }
+.hero-label { font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--acc); font-weight:600; }
+.hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.hero-name { font-size:30px; font-weight:700; letter-spacing:-.02em; margin:2px 0 0; display:flex; align-items:center; gap:9px; }
+.hero-name .flag { font-size:11px; padding:2px 7px; border-radius:5px; background:#3a2f10; color:var(--acc); letter-spacing:.04em; }
+.hero-score { text-align:right; flex:none; }
+.hero-score b { font-size:30px; font-variant-numeric:tabular-nums; color:var(--acc); line-height:1; }
+.hero-score span { display:block; font-size:11px; color:var(--fg3); }
+.hero-why { margin:12px 0 0; padding-left:18px; color:var(--fg); font-size:13.5px; }
+.hero-why li { margin:4px 0; }
+.hero-why li.neg { color:#f2a49b; }
+.hero-line { margin-top:12px; padding:10px 12px; background:#11161e; border-radius:8px; font-size:13px; color:var(--fg2); }
+.hero-line b { color:var(--fg); font-weight:600; }
+.hero-actions { margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.hero-more { background:var(--acc); border:0; color:#1a1400; font-weight:600; padding:8px 14px; border-radius:8px; font-size:13px; }
+.alts { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.alts > span { font-size:11.5px; color:var(--fg3); text-transform:uppercase; letter-spacing:.06em; margin-right:2px; }
+.alt {
+  background:var(--bg3); border:1px solid var(--line); color:var(--fg2);
+  border-radius:8px; padding:6px 11px; font-size:13px; display:flex; align-items:center; gap:7px;
+}
+.alt:hover { border-color:var(--acc); color:var(--fg); }
+.alt b { font-weight:600; color:var(--fg); }
+.alt i { font-style:normal; font-variant-numeric:tabular-nums; color:var(--fg3); font-size:12px; }
+.hero-detail { margin-top:12px; border-top:1px solid var(--line); }
+.onboard { color:var(--fg2); font-size:13.5px; }
+.onboard ol { padding-left:20px; margin:8px 0 0; }
+.onboard li { margin:4px 0; }
+.onboard b { color:var(--fg); }
 
 /* ---------- classement ---------- */
 .ranked { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }

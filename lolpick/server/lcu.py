@@ -86,6 +86,51 @@ def _from_process():
     return None
 
 
+def install_directory():
+    """Dossier d'installation du client, lu sur sa ligne de commande.
+
+    Sert à connaître le chemin du lockfile : ce fichier n'existe QUE pendant
+    que le client tourne, c'est donc le test « League est lancé ? » le moins
+    coûteux qui soit (un simple os.path.exists).
+    """
+    system = platform.system()
+    try:
+        if system == "Windows":
+            out = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq LeagueClientUx.exe", "/NH"],
+                capture_output=True, text=True, timeout=8).stdout
+            if "LeagueClientUx" not in (out or ""):
+                return None
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 "Get-CimInstance Win32_Process -Filter \"name='LeagueClientUx.exe'\""
+                 " | Select-Object -ExpandProperty CommandLine"],
+                capture_output=True, text=True, timeout=10).stdout
+        else:
+            out = subprocess.run(["ps", "x", "-o", "args"],
+                                 capture_output=True, text=True, timeout=8).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+    m = re.search(r'--install-directory=(?:"([^"]+)"|(\S+))', out or "")
+    if m:
+        return m.group(1) or m.group(2)
+    return None
+
+
+def lockfile_path():
+    """Chemin du lockfile du client, ou None."""
+    d = install_directory()
+    if d:
+        p = os.path.join(d, "lockfile")
+        if os.path.exists(p):
+            return p
+    for p in _LOCKFILE_CANDIDATES:
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def find_credentials():
     creds = _from_process()
     if creds:

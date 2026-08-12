@@ -1,0 +1,28 @@
+# ── Nova Voice I/O ──────────────────────────────────────────────────────────
+#
+# Core runtime
+# ------------
+# Wake-word detection  (Apache-2.0, no API key required)
+openwakeword>=0.6.0
+# STT — local Whisper inference via CTranslate2
+faster-whisper>=1.0.0
+# TTS fallback (pure-Python, no binary required)
+pyttsx3>=2.90
+#
+# Audio I/O
+# ---------
+# PortAudio Python bindings (recording)
+pyaudio>=0.2.14
+# WAV playback (optional but recommended; aplay/afplay used as last resort)
+sounddevice>=0.4.6
+soundfile>=0.12.1
+#
+# Numeric core (transitive dep of faster-whisper & openwakeword, pinned here
+# so both can agree on a version)
+numpy>=1.24.0,<3.0
+#
+# ── Optional: better playback fallback ──────────────────────────────────────
+# simpleaudio>=1.0.4      # uncomment if sounddevice is unavailable
+#
+# ── piper TTS (binary, NOT a Python package) ────────────────────────────────
+# piper is a standalone binary; install it separately — see INSTALL below.
